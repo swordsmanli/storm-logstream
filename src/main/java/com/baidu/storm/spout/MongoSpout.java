@@ -33,6 +33,7 @@ import com.mongodb.MongoException;
 * <b>WARNING:</b> You can only use tailable cursors on capped collections.
 * 
 * @author Dan Beaulieu <danjacob.beaulieu@gmail.com>
+* @modifier Xiao Li <lixiao19851026@gmail.com> 2013-04-27
 *
 */
 public abstract class MongoSpout implements IRichSpout {
