@@ -58,15 +58,8 @@ public class MongoAccoutBolt<T> extends BaseBasicBolt {
 	public void execute(Tuple input, BasicOutputCollector collector) {
 		this._collector = collector;
 		if (TupleHelpers.isTickTuple(input)) {
-			System.out.println("##########################" +
-					"#############################" +
-					"#######################");
 			emitCurrentCounts();
 		} else {
-			
-			System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" +
-					"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" +
-					"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 			countObjAndAck(input);
 		}
 	}
@@ -74,10 +67,17 @@ public class MongoAccoutBolt<T> extends BaseBasicBolt {
 	private void countObjAndAck(Tuple input) {
 		// TODO Auto-generated method stub
 		DBObject object = getDBObjectForInput(input);
-		if(object.get("imasDocument") != null) {
-			String tt = ((BSONObject)object.get("imasDocument")).get("tt").toString();
-			Long imas_time = Long.valueOf(tt);
-			String hostname = ((BSONObject)object.get("imasDocument")).get("hostname").toString();
+		if(object.get("Document") != null) {
+			String tt = null;
+			Long imas_time = null;
+			String hostname = null;
+                        try {
+			    tt = ((BSONObject)object.get("Document")).get("tt").toString();
+			    imas_time = Long.valueOf(tt);
+			    hostname = ((BSONObject)object.get("Document")).get("hostname").toString();
+			} catch (NullPointerException e) {
+			    e.printStackTrace();
+			}
 			objCounter.incrementCount(hostname, imas_time);
 			//this._collector.ack(input);
 		}
