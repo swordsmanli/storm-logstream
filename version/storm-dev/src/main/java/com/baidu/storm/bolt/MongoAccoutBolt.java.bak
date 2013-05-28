@@ -1,0 +1,145 @@
+package com.baidu.storm.bolt;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import org.bson.BSONObject;
+import org.json.simple.JSONObject;
+
+import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.BasicOutputCollector;
+
+import backtype.storm.topology.OutputFieldsDeclarer;
+import backtype.storm.tuple.Fields;
+import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
+import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.utils.Utils;
+
+import com.baidu.storm.common.TimestampConverter;
+import com.mongodb.BasicDBObjectBuilder;
+import com.mongodb.DBObject;
+import com.mongodb.util.JSON; 
+
+
+public class MongoAccoutBolt extends BaseBasicBolt {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	public MongoAccoutBolt(String lostYear, long countNumber) {
+		this.lostYear = lostYear;
+		this.countNumber = countNumber; 
+	}
+	
+	@Override
+	public void declareOutputFields(OutputFieldsDeclarer declarer) {
+		// TODO Auto-generated method stub
+		declarer.declare(new Fields("averagesum"));
+	}
+
+	@Override
+	public Map<String, Object> getComponentConfiguration() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void prepare(Map stormConf, TopologyContext context) {
+		// TODO Auto-generated method stub
+		//timeStamps = new ArrayList<Long>();
+		
+	}
+	
+	public void resetCounters() {
+		this.recordNumber = 0;
+		this.sum = 0;
+		this.avgImasResponseTime = 0.0;
+	}
+
+	@Override
+	public void execute(Tuple input, BasicOutputCollector collector) {
+		// Bson format
+		DBObject object = getDBObjectForInput(input);
+		//System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@" + JSON.serialize(object));
+		//System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$" + ((BSONObject)object.get("imasDocument")).get("logtime"));
+		if(object.get("imasDocument") != null) {
+			String logtime = ((BSONObject)object.get("imasDocument")).get("logtime").toString();
+			
+			logtime = this.lostYear + "-" + logtime;
+			String tt = ((BSONObject)object.get("imasDocument")).get("tt").toString();
+			this.sum = Integer.parseInt(tt);
+			
+			this.recordNumber = this.recordNumber + 1;	
+			this.sum += this.sum;
+			/*System.out.println("###########testlixiao01$$$$$$$$$$" + this.recordNumber);
+			if(this.recordNumber == 1000){
+				System.out.println("sum imas@@@@@@@@@@@@" + this.sum + "records @@@@@@@@@@" + this.recordNumber);
+				this.recordNumber = 0;
+				this.sum = 0;
+				//System.out.println("records and sum" + this.recordNumber + "%%%%%%%%" + this.sum);
+			}*/
+			
+			//Long unixTimeStamp = TimestampConverter.stdToUnixTimeStamp(logtime);
+			
+			//this.timeStamps.add(unixTimeStamp);
+
+			//insert every 30s imas logs
+			//long timeInterval = Collections.max(timeStamps).longValue() - 
+				//Collections.min(timeStamps).longValue();
+			System.out.println("###########testlixiao01##########################" + this.recordNumber);
+
+			if(this.recordNumber == this.countNumber) {
+	
+				//this.timeStamps.removeAll(timeStamps);
+				this.avgImasResponseTime = (double) this.sum / this.recordNumber;
+				Double avgRT = Double.valueOf(this.avgImasResponseTime);
+				System.out.println("###########testlixiao##########################" + '\n' + avgRT.doubleValue()
+				+ '\n' + "#####################################" + '\n' + this.recordNumber);
+				collector.emit(new Values(avgRT));
+				//clear counters and array set
+				resetCounters();
+				//this.timeStamps.clear();
+			}
+		}
+	}
+
+	@Override
+	public void cleanup() {
+		// TODO Auto-generated method stub
+		//this.timeStamps.removeAll(timeStamps);
+	}
+	
+	public DBObject getDBObjectForInput(Tuple input) {
+		BasicDBObjectBuilder dbObjectBuilder = new BasicDBObjectBuilder();
+		for (String field : input.getFields()) {
+			 Object value = input.getValueByField(field);
+			 if (isValidDBObjectField(value)) {
+				 dbObjectBuilder.append(field, value);
+			 }
+		}
+		return dbObjectBuilder.get();
+	}
+	
+	private boolean isValidDBObjectField(Object value) {
+		return value instanceof String
+				|| value instanceof Date
+				|| value instanceof Integer
+				|| value instanceof Float
+				|| value instanceof Double
+				|| value instanceof Short
+				|| value instanceof Long
+				|| value instanceof DBObject;
+	}
+	private double avgImasResponseTime;
+	private int sum;
+	private int recordNumber;
+	private String lostYear;
+	private long countNumber;
+	//private List<Long> timeStamps = null;
+
+}

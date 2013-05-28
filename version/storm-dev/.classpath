@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry including="**/*.java" kind="src" output="target/test-classes" path="src/test/java"/>
+	<classpathentry including="**/*.java" kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="spout"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="var" path="M2_REPO/junit/junit/3.8.1/junit-3.8.1.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/storm-0.8.1.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/mongo-2.10.1.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/mongo2gson-1.0.2-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/json-simple-1.1.1.jar"/>
+	<classpathentry kind="output" path="target/classes"/>
+</classpath>
