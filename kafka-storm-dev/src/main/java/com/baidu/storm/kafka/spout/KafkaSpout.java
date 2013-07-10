@@ -1,32 +1,178 @@
 package com.baidu.storm.kafka.spout;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.baidu.storm.kafka.common.CommonUtils;
+import com.baidu.storm.kafka.common.DynamicPartitionConnections;
+import com.baidu.storm.kafka.common.DynamicPartitionManagerKeeper;
+import com.baidu.storm.kafka.common.EmitState;
+import com.baidu.storm.kafka.common.KafkaMessageId;
+import com.baidu.storm.kafka.common.PartitionManager;
+import com.baidu.storm.kafka.common.SpoutConfigParser;
+import com.baidu.storm.kafka.common.ZkState;
+
+import backtype.storm.Config;
 import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 
-public class KafkaSpout extends BaseRichSpout {
 
+@SuppressWarnings("all")
+public class KafkaSpout extends BaseRichSpout {
+	
+	private static final long serialVersionUID = 1L;
+	
+	/* (non-Javadoc)
+	 * @see backtype.storm.topology.base.BaseRichSpout#close()
+	 */
+	@Override
+	public void close() {
+		//shut down curator
+		this._zkState.close();
+	}
+
+	/* (non-Javadoc)
+	 * @see backtype.storm.topology.base.BaseRichSpout#activate()
+	 */
+	@Override
+	public void activate() {
+		commit();
+	}
+
+	/* (non-Javadoc)
+	 * @see backtype.storm.topology.base.BaseRichSpout#deactivate()
+	 */
+	@Override
+	public void deactivate() {
+		// TODO Auto-generated method stub
+		commit();
+	}
+	
+	/* (non-Javadoc)
+	 * @see backtype.storm.topology.base.BaseRichSpout#ack(java.lang.Object)
+	 */
+	@Override
+	public void ack(Object msgId) {
+		KafkaMessageId id = (KafkaMessageId)msgId;
+		PartitionManager pm = this._pmKeeper.getManagers(id.getPartitionId());
+		if(null != pm) {
+			/*
+			 * remove pending offset
+			 * done emit and no need to commit
+			 */
+			pm.ack(id.getOffset());
+		}		
+	}
+
+	/* (non-Javadoc)
+	 * @see backtype.storm.topology.base.BaseRichSpout#fail(java.lang.Object)
+	 */
+	@Override
+	public void fail(Object msgId) {
+		/*
+		 * collector.emit(tup, new KafkaMessageId(this._id, toEmitMsg.getOffset()));
+		 * so i can get from here
+		 */
+		KafkaMessageId id = (KafkaMessageId)msgId;
+		PartitionManager pm = this._pmKeeper.getManagers(id.getPartitionId());
+		if(null != pm) {
+			//rollback to recommit
+			pm.fail(id.getOffset());
+		}
+	}
+
+	public KafkaSpout(SpoutConfigParser _configParser) {
+		this._configParser = _configParser;
+	}
+	
+	@Override
 	public void open(Map conf, TopologyContext context,
 			SpoutOutputCollector collector) {
 		// TODO Auto-generated method stub
 		this._collector = collector;
+		
+		/*
+		 * init zookeeper [load zk server and port]
+		 */
 		Map stateConf = new HashMap(conf);
+		
+		List<String> zkServers = _configParser.zkServers;
+		if(zkServers == null) {
+			zkServers = (List<String>)conf.get(Config.STORM_ZOOKEEPER_SERVERS);
+		}
+		Integer zkPort = _configParser.zkPort;
+		if(zkPort == null) {
+			zkPort = (Integer) (conf.get(Config.STORM_ZOOKEEPER_PORT));
+		}
+		String zkRoot = _configParser.zkRoot;
+		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_SERVERS, zkServers);
+		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_PORT, zkPort);
+		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_ROOT, zkRoot);
+		//init zk operator object
+		_zkState = new ZkState(stateConf);
+		
+		//init kafka consumer connection
+		_configParser = new SpoutConfigParser();
+		_connections = new DynamicPartitionConnections(_configParser);
+		
+		//using Transactions
+		int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
+		_pmKeeper = new DynamicPartitionManagerKeeper(
+				_connections,
+				_zkState,
+				_configParser,
+				stateConf,
+				context.getThisTaskId(),
+				totalTasks,
+				CommonUtils.getUUID());
 	}
 
+	@Override
 	public void nextTuple() {
-		// TODO Auto-generated method stub
+		List<PartitionManager> managers = _pmKeeper.getPartitionManagers();
+		for (int i=0; i< managers.size(); i++) {
+			this._currPartitionIndex = this._currPartitionIndex % managers.size();
+			EmitState state = managers.get(this._currPartitionIndex).next(_collector);
+			//no more left to emit then move to next partition
+			if(state != EmitState.EMITTED_MORE_LEFT) {
+				this._currPartitionIndex = (this._currPartitionIndex + 1) % managers.size();
+			} else {
+				break;
+			}
+			
+			/*if(state != EmitState.NO_EMITTED) {
+				//to make sure waitingToEmit is empty and commit the status
+				break;
+			}*/
+		}
 		
+		long now = System.currentTimeMillis();
+		if((now - this._lastUpdateMs) > this._configParser.stateUpdateIntervalsMs) {
+			commit();
+		} 
+	}
+	
+	private void commit() {
+		this._lastUpdateMs = System.currentTimeMillis();
+		for(PartitionManager pm : _pmKeeper.getPartitionManagers()) {
+			pm.commit();
+		}
 	}
 
+	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		// TODO Auto-generated method stub
-		
+		declarer.declare(this._configParser.scheme.getOutputFields());
 	}
 	
-	
+	private long _lastUpdateMs = 0;
+	private int _currPartitionIndex = 0;
+	private DynamicPartitionConnections _connections;
+	private DynamicPartitionManagerKeeper _pmKeeper;
+	private ZkState _zkState; 
+	private SpoutConfigParser _configParser;
 	private SpoutOutputCollector _collector;
+
 }

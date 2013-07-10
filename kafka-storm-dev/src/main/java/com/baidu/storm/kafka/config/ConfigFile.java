@@ -28,6 +28,9 @@ public class ConfigFile {
 	public static String ZK_ROOT = "/kafka_storm";
 	public static String ZK_HOSTS = "ip1,ip2,ipN ...";
 	public static int ZK_PORT = 2181;
-	public static long ZK_STATE_UPDATE_INTERVAL_MS = 2000; 
+	public static long ZK_STATE_UPDATE_INTERVAL_MS = 2000;
+	
+	//PartitionManager
+	public static int PM_REFRESH_SECS = 60;
 	
 }

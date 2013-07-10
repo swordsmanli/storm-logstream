@@ -7,7 +7,15 @@
 	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/mongo-2.10.1.jar"/>
 	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/storm-0.8.1.jar"/>
 	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/json-simple-1.1.1.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/slf4j-api-1.7.5.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/slf4j-log4j12-1.7.5.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/curator-framework-1.3.3.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/curator-recipes-1.3.3.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/curator-client-1.3.3.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/guava-14.0.1.jar"/>
 	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/kafka-0.7.2.jar"/>
-	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/curator-framework-1.0.1.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/zookeeper-3.3.4.jar"/>
+	<classpathentry kind="lib" path="D:/Documents and Settings/lixiao01/workspace/lib/scala-library-2.8.1.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

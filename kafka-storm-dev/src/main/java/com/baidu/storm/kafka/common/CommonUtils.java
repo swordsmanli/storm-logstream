@@ -4,12 +4,11 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.baidu.storm.kafka.config.ConfigFile;
+import java.util.UUID;
 
 import kafka.message.Message;
 
-public class ConfigPasrserUtils {
+public class CommonUtils {
 	
 	public static String kafkaMsgToString(Message msg) {
 		ByteBuffer buffer = msg.payload();
@@ -53,6 +52,8 @@ public class ConfigPasrserUtils {
 		return ret;
 	}
 	
-	private List<String> hosts = null;
+	public static String getUUID() {
+		return UUID.randomUUID().toString();
+	}
 	 
 }
