@@ -14,7 +14,7 @@ import com.baidu.storm.kafka.common.CommonUtils;
 public class SpoutConfigParser implements Serializable {
 
 	/**
-	 * 
+	 * config parser
 	 */
 	
 	public SpoutConfigParser() {}
@@ -55,4 +55,17 @@ public class SpoutConfigParser implements Serializable {
 	
 	public IRawMultiScheme scheme = new StringScheme();
 	//public Scheme scheme = new StringScheme();
+	
+	//read mongo config parameters
+	public String mongoHost = ConfigFile.MONGO_HOST;
+	public int mongoPort = ConfigFile.MONGO_PORT;
+	public String boltDBName = ConfigFile.MONGO_DB_NAME;
+	public String boltCollectionName = ConfigFile.MONGO_COLL_NAME;
+	public String lostYear = ConfigFile.LOG_LOST_YEAR;
+	public String logAccountKey = ConfigFile.LOG_ACCOUNT_KEY;
+	public String logAccountValue = ConfigFile.LOG_ACCOUNT_VALUE;
+	public long intervalTime = ConfigFile.LOG_EMIT_INTERVAL_MS;
+	
+	//read storm config parameters
+	public boolean debugMode = ConfigFile.STORM_DEBUG;
 }

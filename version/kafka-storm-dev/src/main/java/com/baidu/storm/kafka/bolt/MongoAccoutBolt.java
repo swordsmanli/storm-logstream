@@ -78,7 +78,7 @@ public class MongoAccoutBolt<T> extends BaseBasicBolt {
 	private void countObjAndAck(Tuple input) {
 		// TODO Auto-generated method stub
 		DBObject object = getDBObjectForInput(input);
-		if(object.get("Document") != null) {
+		if(object.get("bytes") != null) {
 			String recordValue = null;
 			Long counterValue = null;
 			String recordKey = null;
