@@ -31,7 +31,7 @@ public class DynamicPartitionManagerKeeper {
 		this._zkState = zkState;
 		this._config = config;
 		this._refreshMs = config.pm_refresh_secs * 1000;
-		_brokerFetcher = new DynamicBrokerFetcher(
+		this._brokerFetcher = new DynamicBrokerFetcher(
 				this._zkState, 
 				this._config);
 	}
@@ -49,31 +49,40 @@ public class DynamicPartitionManagerKeeper {
 		LOG.info("Refreshing partition manager connections");
 		try {
 			Map<String, List> brokers = this._brokerFetcher.getBrokerInfo();
+			LOG.info("refreshing ####################$$" + brokers.toString());
 			
 			//get 
 			Set<GlobalPartitionId> sets = new HashSet();
 			for(String host : brokers.keySet()) {
 				List info = brokers.get(host);
 				int port = (Integer) info.get(0);
-				long partitions = (Long) info.get(1);
+				int partitions = (Integer) info.get(1);
+				LOG.info("parsing ####################$$ info:" + "port:" + port + "partitions" + partitions);
+				
 				KafkaHostPort hp = new KafkaHostPort(host, port);
+				//partitions in 0.7.x by config not accquire from zookeeper
+				partitions = this._config.partitionsPerHost;
+				//for 0.8.x not use partitions = this._config.partitionsPerHost;
 				for(int i=0; i<partitions; i++) {
 					GlobalPartitionId id = new GlobalPartitionId(hp, i);
+					LOG.info("adding ####################$$ id:" + id.toString());
+					sets.add(id);
 					/*
 					 * avoid duplicated insertion or throw any
 					 * hash set do not allow duplicated value
 					 */
-					if(myOwnership(id)) {
+					/*if(myOwnership(id)) {
+						LOG.info("adding ####################$$ id:" + id.toString());
 						sets.add(id);
-					}
+					}*/
 				}
 				
 				Set<GlobalPartitionId> currSet = this._managers.keySet();
 				Set<GlobalPartitionId> newPartitions = new HashSet<GlobalPartitionId>(sets);
-				//?newPartitions.removeAll(currSet);
+				//newPartitions.removeAll(currSet);
 				
-				Set<GlobalPartitionId> deletedPartitions = new HashSet<GlobalPartitionId>(currSet);//
-				//?deletedPartitions.removeAll(sets);
+				Set<GlobalPartitionId> deletedPartitions = new HashSet<GlobalPartitionId>(currSet);
+				//deletedPartitions.removeAll(sets);
 				
 				LOG.info("Deleted partition managers: " + deletedPartitions.toString());
 				for(GlobalPartitionId id : deletedPartitions) {
@@ -108,7 +117,7 @@ public class DynamicPartitionManagerKeeper {
 	
 	private boolean myOwnership(GlobalPartitionId id) {
 		//skip any duplicated GlobalPartition object
-		int val = Math.abs(id.getHostPort().hashCode() + 23 * id.getPartitionId());
+		int val = Math.abs(id.getHostPort().hashCode() + 13 * id.getPartitionId());
 		return val % this._totalTasks == this._taskIndex;
 	}
 	

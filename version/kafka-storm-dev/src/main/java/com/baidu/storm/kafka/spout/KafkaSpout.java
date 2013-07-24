@@ -1,5 +1,6 @@
 package com.baidu.storm.kafka.spout;
 
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,15 +100,16 @@ public class KafkaSpout extends BaseRichSpout {
 		 */
 		Map stateConf = new HashMap(conf);
 		
-		List<String> zkServers = _configParser.zkServers;
+		List<String> zkServers = this._configParser.zkServers;
+		//System.out.println("$$$$$$$$$$$$$$$$$$$$$$" + zkServers.toString());
 		if(zkServers == null) {
 			zkServers = (List<String>)conf.get(Config.STORM_ZOOKEEPER_SERVERS);
 		}
-		Integer zkPort = _configParser.zkPort;
+		Integer zkPort = this._configParser.zkPort;
 		if(zkPort == null) {
 			zkPort = (Integer) (conf.get(Config.STORM_ZOOKEEPER_PORT));
 		}
-		String zkRoot = _configParser.zkRoot;
+		String zkRoot = this._configParser.zkRoot;
 		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_SERVERS, zkServers);
 		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_PORT, zkPort);
 		stateConf.put(Config.TRANSACTIONAL_ZOOKEEPER_ROOT, zkRoot);
@@ -115,15 +117,16 @@ public class KafkaSpout extends BaseRichSpout {
 		_zkState = new ZkState(stateConf);
 		
 		//init kafka consumer connection
-		_configParser = new SpoutConfigParser();
-		_connections = new DynamicPartitionConnections(_configParser);
+		//_configParser = new SpoutConfigParser();
+		_connections = new DynamicPartitionConnections(this._configParser);
 		
 		//using Transactions
 		int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
-		_pmKeeper = new DynamicPartitionManagerKeeper(
+		//System.out.println("!!!!!!!!!!!!!!!" + totalTasks);
+		this._pmKeeper = new DynamicPartitionManagerKeeper(
 				_connections,
 				_zkState,
-				_configParser,
+				this._configParser,
 				stateConf,
 				context.getThisTaskId(),
 				totalTasks,
@@ -132,21 +135,28 @@ public class KafkaSpout extends BaseRichSpout {
 
 	@Override
 	public void nextTuple() {
-		List<PartitionManager> managers = _pmKeeper.getPartitionManagers();
+        //the size of managers keeps the numbers of consumers(hostport, pid)
+		List<PartitionManager> managers = this._pmKeeper.getPartitionManagers();
+		//System.out.println("%%%%%%%%%%%%%%%%%" + managers.size());
 		for (int i=0; i< managers.size(); i++) {
 			this._currPartitionIndex = this._currPartitionIndex % managers.size();
-			EmitState state = managers.get(this._currPartitionIndex).next(_collector);
+			EmitState state;
+			try {
+				state = managers.get(this._currPartitionIndex).next(this._collector);
 			//no more left to emit then move to next partition
-			if(state != EmitState.EMITTED_MORE_LEFT) {
-				this._currPartitionIndex = (this._currPartitionIndex + 1) % managers.size();
-			} else {
-				break;
+				if(state != EmitState.EMITTED_MORE_LEFT) {
+					this._currPartitionIndex = (this._currPartitionIndex + 1) % managers.size();
+				}else {
+					break;
+				}
+				/*if(state != EmitState.NO_EMITTED) {
+					//to make sure waitingToEmit is empty and commit the status
+					break;
+				}*/
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			
-			/*if(state != EmitState.NO_EMITTED) {
-				//to make sure waitingToEmit is empty and commit the status
-				break;
-			}*/
 		}
 		
 		long now = System.currentTimeMillis();
@@ -157,7 +167,7 @@ public class KafkaSpout extends BaseRichSpout {
 	
 	private void commit() {
 		this._lastUpdateMs = System.currentTimeMillis();
-		for(PartitionManager pm : _pmKeeper.getPartitionManagers()) {
+		for(PartitionManager pm : this._pmKeeper.getPartitionManagers()) {
 			pm.commit();
 		}
 	}

@@ -23,7 +23,7 @@ public class InsertHelper implements Runnable {
 	@Override
 	public void run() {
 		
-		try {
+		/*try {
 			//maybe u can insert something before storm ready
 			DBCollection coll = MongoDBHelper.getDBCollection(
 					this.dbHost,
@@ -35,7 +35,7 @@ public class InsertHelper implements Runnable {
 			e.printStackTrace();
 		} catch (MongoException e) {
 			e.printStackTrace();
-		}
+		}*/
 		//wait until storm main thread ready
 		while(this.latch.getCount() != 0) {
 			try {

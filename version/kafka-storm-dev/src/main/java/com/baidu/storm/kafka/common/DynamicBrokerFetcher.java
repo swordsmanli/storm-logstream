@@ -6,13 +6,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.netflix.curator.framework.CuratorFramework;
 
 public class DynamicBrokerFetcher {
 	
+	public static Logger LOG = LoggerFactory.getLogger(DynamicPartitionManagerKeeper.class);
+	
 	public DynamicBrokerFetcher(ZkState zkState, SpoutConfigParser config) {
 		//get curator to control zookeeper
 		this._curator = zkState.getCurator();
+		LOG.info("@@@@@@@@@@@@@@@@##################$$$$$"+ this._curator);
 		this._config = config;
 	}
 	
@@ -30,16 +36,33 @@ public class DynamicBrokerFetcher {
 		 */
 		
 		Map<String, List> ret = new HashMap<String, List>();
-		String topicKafkaPath = "/brokers/topics" + this._config.kafkaTopic;
-		String kafkaInfoPath = "/borkers/ids";
+		String topicKafkaPath = "/brokers/topics" + "/" + this._config.kafkaTopic;
+		String kafkaInfoPath = "/brokers/ids";
+		
+		LOG.info("@@@@@@@@@@@@@@@@topic kafka path:"+ topicKafkaPath);
+		LOG.info("@@@@@@@@@@@@@@@@kafka info path:"+ kafkaInfoPath);
 		
 		try {
 			List<String> childs = this._curator.getChildren().forPath(topicKafkaPath);
+			//List<String> childs = this._curator.getChildren().forPath(kafkaInfoPath);
+			LOG.info("@@@@@@@@@@@@@@@@get childrens"+ childs.toString());
+			
 			for(String c : childs) {
-				byte[] numPartitions = this._curator.getData().forPath(topicKafkaPath + '/' + c);
-				byte[] brokers = this._curator.getData().forPath(kafkaInfoPath + '/' + c);
+				//LOG.info("@@@@@@@@#####$$$$$$$$ ids id: " + c);
+				
+				byte[] numPartitions = this._curator.getData().forPath(topicKafkaPath + "/" + c);
+				
+				LOG.info("@@@@@@@@#####$$$$$$$$ number:"+ numPartitions.toString());
+				
+				byte[] brokers = this._curator.getData().forPath(kafkaInfoPath + "/" + c);
+				
+				//LOG.info("@@@@@@@@#####$$$$$$$$ brokers:"+ brokers.toString());
+				
 				KafkaHostPort kafkaBrokers = getBrokers(brokers);
 				int partitions = getPartitionsNumber(numPartitions);
+				
+				LOG.info("@@@@@@@@#####$$$$$$$$ partitions:"+ partitions);
+				
 				List info = new ArrayList();
 				info.add((int)kafkaBrokers.getPort());
 				info.add((int)partitions);

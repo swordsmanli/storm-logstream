@@ -1,5 +1,6 @@
 package com.baidu.storm.kafka.common;
 
+import java.io.UnsupportedEncodingException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class PartitionManager {
 		this._stormConf = stormConf;
 		this._id = id;
 		this._taskInstanceId = taskInstanceId;
-		//aquire a consumer
+		//aquire a consumer contains hostport and partitionid
 		this._consumer = this._connections.register(_id);
 		
 		setCommittedOffset(this._taskInstanceId, this._config, this._zkState);
@@ -147,7 +148,7 @@ public class PartitionManager {
 	/*
 	 * fill kafka message and 
 	 */
-	public EmitState next(SpoutOutputCollector collector) {
+	public EmitState next(SpoutOutputCollector collector) throws UnsupportedEncodingException {
 		//emit all kafka messages to bolt and fill again
 		if(this._waitingToEmit.isEmpty()) {
 			fill();
@@ -163,6 +164,7 @@ public class PartitionManager {
 			Iterable<List<Object>> tups = this._config.scheme.deserialize(Utils.toByteArray(toEmitMsg.getMsg().payload()));
 			if(null != tups) {
 				for(List<Object> tup: tups) {
+					//LOG.info("@@@@@@@@@@@@@@@@@@@@@@@storm-emitting" + this._id.toString());
 					collector.emit(tup, new KafkaMessageId(this._id, toEmitMsg.getOffset()));
 				}
 				break;

@@ -1,3 +1,4 @@
+package com.baidu.storm.topology;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -100,7 +101,7 @@ public class LogStreamTopology {
 			builder.setSpout(
 					"baidu-log",
 					kafkaSpout, 
-					2);
+					1);
 			builder.setBolt(
 					"account", 
 					accoutBolt,
@@ -112,7 +113,7 @@ public class LogStreamTopology {
 			
 			Config conf = new Config();
 			conf.setDebug(config.debugMode);
-			
+			System.out.println("########################## ok");			
 			if(args != null && args.length > 0) {
 				conf.setNumAckers(2);
 				conf.setNumWorkers(2);
@@ -124,6 +125,8 @@ public class LogStreamTopology {
 			} else {
 				LocalCluster cluster = new LocalCluster();
 				
+				System.out.println("########################## ok");
+				
 				cluster.submitTopology(
 						"mongoStorm", 
 						conf, 
@@ -131,7 +134,7 @@ public class LogStreamTopology {
 				
 				latch.countDown();
 				
-				Thread.sleep(10000);
+				//Thread.sleep(10);
 				
 			}
 			

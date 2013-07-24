@@ -6,8 +6,13 @@
 
 package com.baidu.storm.kafka.bolt;
 
+import java.io.Reader;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -25,8 +30,14 @@ import com.baidu.storm.kafka.common.BaseCounter;
 import com.baidu.storm.kafka.common.TupleHelpers;
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBObject; 
+import com.mongodb.util.JSON;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+import org.json.simple.parser.ContainerFactory;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 
 public class MongoAccoutBolt<T> extends BaseBasicBolt {
@@ -77,15 +88,34 @@ public class MongoAccoutBolt<T> extends BaseBasicBolt {
 
 	private void countObjAndAck(Tuple input) {
 		// TODO Auto-generated method stub
-		DBObject object = getDBObjectForInput(input);
-		if(object.get("bytes") != null) {
+		//System.out.println("######################@@ record value:" + input.getStringByField("bytes"));
+		//System.out.println("######################## tuple value:" + input.getString(0));
+		//?serialization error func
+		//DBObject object = getDBObjectForInput(input);
+		
+		String jsonText = input.getStringByField("bytes");
+		
+		/*
+		 * Official MongoDB Java Driver comes with utility methods for parsing JSON to BSON and serializing BSON to JSON.
+		 * import com.mongodb.DBObject;
+		 * import com.mongodb.util.JSON;
+		 * DBObject dbObj = ... ;
+		 * String json = JSON.serialize( dbObj );
+		 * DBObject bson = ( DBObject ) JSON.parse( json ); 
+		 */
+		
+		
+		
+		if(null != jsonText) {
+			DBObject bson = (DBObject)JSON.parse((jsonText));
+			System.out.println("######################@@ bson value:" + bson.get("tt").toString());
 			String recordValue = null;
 			Long counterValue = null;
 			String recordKey = null;
 			try {
-				recordValue = ((BSONObject)object.get("Document")).get(this.logValue).toString();
+				recordValue = bson.get(this.logValue).toString();
 				counterValue = Long.valueOf(recordValue);
-				recordKey = ((BSONObject)object.get("Document")).get(this.logKey).toString();
+				recordKey = bson.get(this.logKey).toString();
 			} catch (NullPointerException e) {
 				recordValue = null;
 				counterValue = 0L;
@@ -160,10 +190,13 @@ public class MongoAccoutBolt<T> extends BaseBasicBolt {
 	public DBObject getDBObjectForInput(Tuple input) {
 		BasicDBObjectBuilder dbObjectBuilder = new BasicDBObjectBuilder();
 		for (String field : input.getFields()) {
-			 Object value = input.getValueByField(field);
-			 if (isValidDBObjectField(value)) {
-				 dbObjectBuilder.append(field, value);
-			 }
+			Object value = input.getValueByField(field);
+			//?serialization error
+			//System.out.println("######################## field value:" + value.toString());
+			dbObjectBuilder.append(field, value);
+			if (isValidDBObjectField(value)) {
+				dbObjectBuilder.append(field, value);
+			}
 		}
 		return dbObjectBuilder.get();
 	}

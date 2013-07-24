@@ -1,5 +1,6 @@
 package com.baidu.storm.kafka.common;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -22,8 +23,6 @@ public class ZkState {
 
 	public static final Logger LOG = LoggerFactory.getLogger(ZkState.class);
 	
-	CuratorFramework _curator;
-	
 	@SuppressWarnings("unchecked")
 	private CuratorFramework newCurator(Map stateConf) {
 		Integer port = (Integer) stateConf.get(Config.TRANSACTIONAL_ZOOKEEPER_PORT);
@@ -32,20 +31,26 @@ public class ZkState {
 			zkServerPorts += server + ":" + port + ",";
 		}
 		
-		return CuratorFrameworkFactory.newClient(
+		LOG.info("@@@@@@@@@@@@@@@" + zkServerPorts);
+		
+		try {
+			return CuratorFrameworkFactory.newClient(
 				zkServerPorts, 
 				Utils.getInt(stateConf.get(Config.STORM_ZOOKEEPER_SESSION_TIMEOUT)), 
 				20000, 
 				new RetryNTimes(Utils.getInt(stateConf.get(Config.STORM_ZOOKEEPER_RETRY_TIMES)),
 						Utils.getInt(stateConf.get(Config.STORM_ZOOKEEPER_RETRY_INTERVAL))));
+		}catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public ZkState(Map stateConf) {
 		LOG.info("ZkState class init.");
-		stateConf = new HashMap(stateConf);
+		this._stateConf = new HashMap(stateConf);
 		
 		try {
-			_curator = newCurator(stateConf);
+			_curator = newCurator(this._stateConf);
 			_curator.start();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -53,7 +58,8 @@ public class ZkState {
 	}
 	
 	public CuratorFramework getCurator() {
-		assert _curator != null; 
+		assert _curator != null;
+		LOG.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!###################"+ _curator);
 		return _curator;
 	}
 	
@@ -109,5 +115,8 @@ public class ZkState {
 			return null;
 		}
 	}
+	
+	private CuratorFramework _curator;
+	private Map _stateConf;
 	
 }

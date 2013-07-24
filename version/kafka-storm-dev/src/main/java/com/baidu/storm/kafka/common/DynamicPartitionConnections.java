@@ -35,8 +35,8 @@ public class DynamicPartitionConnections {
 							new SimpleConsumer(
 									host.getHost(),
 									host.getPort(),
-									_config.socketTimeoutMs,
-									_config.bufferSizeBytes)));
+									this._config.socketTimeoutMs,
+									this._config.bufferSizeBytes)));
 		}
 		ConnectionInfo info = _connections.get(host);
 		info.partitionIds.add(partitionId);

@@ -35,7 +35,7 @@ public class MongoDBHelper {
 		collection = db.createCollection(
 				collectionName, 
 				new BasicDBObject("capped", true)
-				.append("size", 100000000));
+				.append("size", 10000000));
 		return collection;
 	}
 	
