@@ -137,7 +137,7 @@ public class KafkaSpout extends BaseRichSpout {
 	public void nextTuple() {
         //the size of managers keeps the numbers of consumers(hostport, pid)
 		List<PartitionManager> managers = this._pmKeeper.getPartitionManagers();
-		//System.out.println("%%%%%%%%%%%%%%%%%" + managers.size());
+		System.out.println("%%%%%%%%%%%%%%%%% manger size:" + managers.size());
 		for (int i=0; i< managers.size(); i++) {
 			this._currPartitionIndex = this._currPartitionIndex % managers.size();
 			EmitState state;
@@ -146,13 +146,12 @@ public class KafkaSpout extends BaseRichSpout {
 			//no more left to emit then move to next partition
 				if(state != EmitState.EMITTED_MORE_LEFT) {
 					this._currPartitionIndex = (this._currPartitionIndex + 1) % managers.size();
-				}else {
+				}
+				if(state != EmitState.NO_EMITTED) {
+					//to make sure waitingToEmit is empty and commit the status
+					System.out.println("############### partition " + this._currPartitionIndex + "break out");
 					break;
 				}
-				/*if(state != EmitState.NO_EMITTED) {
-					//to make sure waitingToEmit is empty and commit the status
-					break;
-				}*/
 			} catch (UnsupportedEncodingException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

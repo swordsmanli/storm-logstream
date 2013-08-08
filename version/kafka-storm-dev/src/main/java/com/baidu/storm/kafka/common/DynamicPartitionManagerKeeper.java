@@ -79,10 +79,10 @@ public class DynamicPartitionManagerKeeper {
 				
 				Set<GlobalPartitionId> currSet = this._managers.keySet();
 				Set<GlobalPartitionId> newPartitions = new HashSet<GlobalPartitionId>(sets);
-				//newPartitions.removeAll(currSet);
+				newPartitions.removeAll(currSet);
 				
 				Set<GlobalPartitionId> deletedPartitions = new HashSet<GlobalPartitionId>(currSet);
-				//deletedPartitions.removeAll(sets);
+				deletedPartitions.removeAll(sets);
 				
 				LOG.info("Deleted partition managers: " + deletedPartitions.toString());
 				for(GlobalPartitionId id : deletedPartitions) {

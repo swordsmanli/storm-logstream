@@ -1,5 +1,6 @@
 package com.baidu.storm.kafka.common;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,6 +9,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import kafka.api.FetchRequest;
+import kafka.api.OffsetRequest;
+import kafka.common.ErrorMapping;
+import kafka.common.OffsetOutOfRangeException;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.javaapi.message.ByteBufferMessageSet;
 import kafka.message.MessageAndOffset;
@@ -49,6 +53,7 @@ public class PartitionManager {
 		this._consumer = this._connections.register(_id);
 		
 		setCommittedOffset(this._taskInstanceId, this._config, this._zkState);
+		System.out.println("partition manager init@@@@@@");
 		
 	}
 	/*
@@ -87,7 +92,8 @@ public class PartitionManager {
 		}else if(jsonTaskInstanceId == null || jsonOffset == null) {
 			this._committedTo = this._consumer.getOffsetsBefore(this._config.kafkaTopic, 
 					this._id.getPartitionId(), 
-					-1,
+					//-1,
+					OffsetRequest.LatestTime(),
 					1)[0];
 			LOG.info("using last commit offset id. -1");
 		//force offset from zkeepoer
@@ -107,40 +113,57 @@ public class PartitionManager {
 				+ this._id;
 	}
 	
-	private void fill() {
+	private void fill() throws IOException{
 		long startTime = System.nanoTime();
-		ByteBufferMessageSet msgs = this._consumer.fetch(
+		ByteBufferMessageSet msgs = null;
+		try {
+			msgs = this._consumer.fetch(
 				new FetchRequest(
 						this._config.kafkaTopic,
 						this._id.getPartitionId(),
 						this._emittedToOffset,
 						this._config.fetchSizeBytes));
-		long endTime = System.nanoTime();
-		long millis = (endTime - startTime)/1000000;
 		
-		int numMessages = msgs.underlying().size();
-		if(numMessages > 0) {
-			LOG.info("Fetched " 
+			long endTime = System.nanoTime();
+			long millis = (endTime - startTime)/1000000;
+		
+			int numMessages = msgs.underlying().size();
+			if(numMessages > 0) {
+				LOG.info("Fetched " 
 					+ numMessages 
 					+ " messages from kafka " 
 					+ this._consumer.host() 
 					+ ":" + this._id.getPartitionId());
-		}
-		/*
-		 * update offset already fetched
-		 */
-		for(MessageAndOffset msg : msgs) {
-			this._pendingOffsets.add(this._emittedToOffset);
-			this._waitingToEmit.add(new MessageAndRealOffset(msg.message(), this._emittedToOffset));
-			this._emittedToOffset = msg.offset();	
-		}
-		if(numMessages > 0) {
-			LOG.info("Added " 
+			}
+			/*
+			 * update offset already fetched
+			 */
+			for(MessageAndOffset msg : msgs) {
+				this._pendingOffsets.add(this._emittedToOffset);
+				this._waitingToEmit.add(new MessageAndRealOffset(msg.message(), this._emittedToOffset));
+				this._emittedToOffset = msg.offset();	
+			}
+			if(numMessages > 0) {
+				LOG.info("Added " 
 					+ numMessages 
 					+ " messages from kafka " 
 					+ this._consumer.host() 
 					+ ":" + this._id.getPartitionId() 
 					+ " to internal buffers");
+			}
+		//Error handling kafka with detecting error codes
+		}catch (OffsetOutOfRangeException _) {
+			if(msgs.getErrorCode() != ErrorMapping.NoError()) {
+				long[] offsets = this._consumer.getOffsetsBefore(
+						this._config.kafkaTopic, 
+						this._id.getPartitionId(),
+						this._config.startOffset,
+						1);
+				if (offsets != null && offsets.length > 0) {
+					this._emittedToOffset = offsets[0];
+					ErrorMapping.maybeThrowException(msgs.getErrorCode());
+				}
+			}
 		}
 	}
 	
@@ -151,7 +174,12 @@ public class PartitionManager {
 	public EmitState next(SpoutOutputCollector collector) throws UnsupportedEncodingException {
 		//emit all kafka messages to bolt and fill again
 		if(this._waitingToEmit.isEmpty()) {
-			fill();
+			try{
+				fill();
+			}catch(IOException ex) {
+				LOG.error("Unable to communicate with a kafka partition:", ex);
+				return EmitState.NO_EMITTED;
+			}
 		}
 		//have messages and pull one and send all
 		while(true) {
@@ -164,7 +192,7 @@ public class PartitionManager {
 			Iterable<List<Object>> tups = this._config.scheme.deserialize(Utils.toByteArray(toEmitMsg.getMsg().payload()));
 			if(null != tups) {
 				for(List<Object> tup: tups) {
-					//LOG.info("@@@@@@@@@@@@@@@@@@@@@@@storm-emitting" + this._id.toString());
+					LOG.info("@@@@@@@@@@@@@@@@@@@@@@@storm-emitting" + this._id.toString());
 					collector.emit(tup, new KafkaMessageId(this._id, toEmitMsg.getOffset()));
 				}
 				break;
@@ -173,7 +201,7 @@ public class PartitionManager {
 				ack(toEmitMsg.getOffset());
 			}
 		}
-		if(!_waitingToEmit.isEmpty()) {
+		if(!this._waitingToEmit.isEmpty()) {
 			return EmitState.EMITTED_MORE_LEFT;
 		} else {
 			return EmitState.EMITTED_END;

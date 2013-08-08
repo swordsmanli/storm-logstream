@@ -22,6 +22,7 @@ import backtype.storm.StormSubmitter;
 import backtype.storm.generated.AlreadyAliveException;
 import backtype.storm.generated.InvalidTopologyException;
 import backtype.storm.topology.TopologyBuilder;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
 
@@ -109,14 +110,14 @@ public class LogStreamTopology {
 			builder.setBolt(
 					"mongoInserter", 
 					mongoInserter,
-					1).allGrouping("account");
+					1).fieldsGrouping("account", new Fields("records"));
 			
 			Config conf = new Config();
 			conf.setDebug(config.debugMode);
 			System.out.println("########################## ok");			
 			if(args != null && args.length > 0) {
-				conf.setNumAckers(2);
-				conf.setNumWorkers(2);
+				conf.setNumAckers(3);
+				conf.setNumWorkers(3);
 				StormSubmitter.submitTopology(
 						args[0], 
 						conf,
